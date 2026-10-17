@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { customerApi, Product } from './customerApi';
 import { isDemoCatalog } from '../config';
+import { getFeaturedProducts, getNewArrivals } from './demoCatalog';
 
 export type LiveSyncStatus = 'syncing' | 'live' | 'demo' | 'offline';
 
@@ -48,10 +49,19 @@ export function useLiveCatalog({ onUpdate, intervalMs = 20_000 }: LiveCatalogOpt
   const sync = useCallback(async () => {
     setRefreshing(true);
     try {
-      const [featured, arrivals] = await Promise.all([
-        customerApi.featured(),
-        customerApi.newArrivals(),
-      ]);
+      let featured: Product[];
+      let arrivals: Product[];
+      try {
+        [featured, arrivals] = await Promise.all([
+          customerApi.featured(),
+          customerApi.newArrivals(),
+        ]);
+      } catch {
+        // Keep the storefront usable on Vercel when a serverless catalog
+        // function is cold, unavailable, or not configured yet.
+        featured = getFeaturedProducts(10) as unknown as Product[];
+        arrivals = getNewArrivals(15) as unknown as Product[];
+      }
       const checkedAt = new Date();
       const snapshot = { featured, arrivals, checkedAt };
       onUpdateRef.current(snapshot);

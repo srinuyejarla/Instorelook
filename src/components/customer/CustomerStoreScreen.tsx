@@ -119,7 +119,7 @@ export default function CustomerStoreScreen({ navigate, storeId }: Props) {
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{shop.shopCategory}</span>
             )}
             <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] ${isDemoCatalog ? 'bg-[#eff8cf] text-[#40520b]' : 'bg-[#e4f7da] text-[#2f7e1a]'}`}>
-              {isDemoCatalog ? 'Curated demo catalog' : 'Live store inventory'}
+               {isDemoCatalog ? 'Sample catalog · verify in store' : 'Live store inventory'}
             </span>
           </div>
         </div>

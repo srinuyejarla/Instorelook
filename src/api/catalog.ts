@@ -194,7 +194,9 @@ function publicProduct(
     price,
     mrp: compareAtPrice,
     compareAtPrice,
-    currency: product.currency || 'USD',
+    // InStoreLook's customer storefront is currently India-first. Keep public
+    // display consistent even when older Mongo records omitted currency.
+    currency: 'INR',
     stock: totalStock,
     totalStock,
     status: product.status || (totalStock > 0 ? 'In Stock' : 'Out of Stock'),

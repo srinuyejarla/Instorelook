@@ -18,7 +18,7 @@ export interface Product {
   style?: string | null;
   price: number;
   mrp?: number | null;
-  /** Demo deployments use USD; legacy local SQLite rows remain INR. */
+  /** The customer experience is India-first and displays prices in INR. */
   currency?: 'USD' | 'INR' | null;
   stock?: number | null;
   status?: 'In Stock' | 'Out of Stock' | null;
@@ -65,6 +65,21 @@ export interface Store {
   isStoreOpen?: boolean | null;
   locationVerified?: boolean | null;
   distanceMiles?: number | null;
+}
+
+export interface NearbyPlace {
+  id: string;
+  name: string;
+  category: string;
+  address: string;
+  phone?: string;
+  website?: string;
+  landmark?: string;
+  latitude: number;
+  longitude: number;
+  distanceMeters: number;
+  source: string;
+  directionsUrl: string;
 }
 
 export interface ProductSize {
@@ -127,7 +142,7 @@ export function discountPct(p: Product): number {
  */
 export function formatPrice(product: Pick<Product, 'price' | 'currency'> | number): string {
   const amount = typeof product === 'number' ? product : product.price;
-  const currency = typeof product === 'number' ? 'USD' : product.currency || 'USD';
+  const currency = 'INR';
   return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
     currency,
@@ -150,7 +165,7 @@ function parseJsonArray(value: unknown): string[] | undefined {
 }
 
 function normaliseProduct(raw: any): Product {
-  const inferredCurrency = raw?.currency || (String(raw?.id || '').startsWith('p-') ? 'INR' : 'USD');
+  const inferredCurrency = 'INR';
   return {
     ...raw,
     currency: inferredCurrency,
@@ -224,6 +239,12 @@ export const customerApi = {
     });
     const json = await getJson(`/api/customer/shops/nearby?${params.toString()}`);
     return (json.data || []) as Store[];
+  },
+
+  async nearbyPlaces(latitude: number, longitude: number, radiusMeters = 5_000): Promise<NearbyPlace[]> {
+    const params = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), radius: String(radiusMeters) });
+    const json = await getJson(`/api/customer/places/nearby?${params.toString()}`);
+    return (json.data || []) as NearbyPlace[];
   },
 
   async shop(id: string): Promise<{ shop: Store; products: Product[] }> {

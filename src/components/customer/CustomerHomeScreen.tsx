@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import * as Icons from '../Icons';
 import { Navigate } from '../../types';
-import { customerApi, Product, Store } from '../../lib/customerApi';
+import { customerApi, NearbyPlace, Product, Store } from '../../lib/customerApi';
 import ProductCard from './ProductCard';
 import { formatLiveTime, useLiveCatalog } from '../../lib/liveCatalog';
 import { isDemoCatalog } from '../../config';
@@ -106,7 +106,8 @@ export default function CustomerHomeScreen({ navigate }: Props) {
   const [stores, setStores] = useState<Store[]>([]);
   const [categories, setCategories] = useState<string[]>(CATEGORY_FALLBACK);
   const [loading, setLoading] = useState(true);
-  const [location, setLocation] = useState('New York City');
+  const [location, setLocation] = useState('Detecting your location…');
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
   const [locating, setLocating] = useState(false);
   const [toast, setToast] = useState('');
 
@@ -138,6 +139,11 @@ export default function CustomerHomeScreen({ navigate }: Props) {
   }, []);
 
   useEffect(() => {
+    detectLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(''), 2800);
     return () => window.clearTimeout(timer);
@@ -157,7 +163,10 @@ export default function CustomerHomeScreen({ navigate }: Props) {
           );
           const data = await response.json();
           const address = data?.address || {};
-          setLocation(address.city || address.town || address.suburb || 'Nearby you');
+          const place = address.city || address.town || address.suburb || address.village || 'Nearby you';
+          setLocation(place);
+          const places = await customerApi.nearbyPlaces(position.coords.latitude, position.coords.longitude).catch(() => []);
+          setNearbyPlaces(places);
         } catch {
           setLocation('Nearby you');
         } finally {
@@ -166,7 +175,9 @@ export default function CustomerHomeScreen({ navigate }: Props) {
       },
       () => {
         setLocating(false);
-        setToast('Location permission is off — showing the NYC edit.');
+        setLocation('Choose your location');
+        setNearbyPlaces([]);
+        setToast('Allow location access to see nearby Indian stores.');
       },
       { enableHighAccuracy: false, timeout: 8000 },
     );
@@ -200,7 +211,7 @@ export default function CustomerHomeScreen({ navigate }: Props) {
 
           {showSampleCatalog && (
             <span role="status" className="sample-catalog-label shrink-0 rounded-full border border-[#c9d98c] bg-[#eff8cf] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-[#40520b]">
-              Curated demo catalog
+              Sample catalog
             </span>
           )}
 
@@ -344,7 +355,31 @@ export default function CustomerHomeScreen({ navigate }: Props) {
           ) : <EmptyState navigate={navigate} />}
         </section>
 
-        {stores.length > 0 && <section className="mb-8">
+         {nearbyPlaces.length > 0 && <section className="mb-10">
+           <SectionHeading eyebrow="Live from your location" title="Nearby on the map" action="Open map" onAction={() => navigate('customer_stores')} />
+           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+             {nearbyPlaces.slice(0, 6).map((place) => (
+               <div key={place.id} className="rounded-[1.25rem] border border-[#deded5] bg-white p-4 shadow-sm">
+                 <div className="flex items-start gap-3">
+                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e4f7da] text-[#2f7e1a]"><Icons.Map size={18} /></span>
+                   <div className="min-w-0 flex-1">
+                     <h3 className="line-clamp-1 text-sm font-black">{place.name}</h3>
+                     <p className="mt-0.5 text-[9px] font-black uppercase tracking-widest text-slate-400">{place.category} · {(place.distanceMeters / 1000).toFixed(1)} km</p>
+                     <p className="mt-2 line-clamp-2 text-[11px] font-medium text-slate-500">{place.address}</p>
+                     {place.landmark && <p className="mt-1 text-[10px] font-bold text-slate-500">Near {place.landmark}</p>}
+                   </div>
+                 </div>
+                 <div className="mt-3 flex gap-2">
+                   {place.phone && <a href={`tel:${place.phone}`} className="rounded-full border border-[#deded5] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest">Call</a>}
+                   <a href={place.directionsUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#171717] px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white">Directions</a>
+                 </div>
+               </div>
+             ))}
+           </div>
+           <p className="mt-3 text-[10px] font-medium text-slate-500">Map businesses provide location details. Product availability appears when the shop is also a registered InStoreLook seller.</p>
+         </section>}
+
+         {stores.length > 0 && <section className="mb-8">
           <SectionHeading eyebrow="Independent energy" title="Stores worth the detour" action="All stores" onAction={() => navigate('customer_stores')} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {stores.slice(0, 4).map((store) => <StoreCard key={store.id} store={store} onOpen={() => navigate('customer_store', { selectedStoreId: store.id })} />)}

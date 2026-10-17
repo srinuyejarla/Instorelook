@@ -10,6 +10,7 @@ import {
   listNearbyStores,
   type PublicProductQuery,
 } from '../catalog';
+import { listNearbyMapPlaces } from '../places';
 
 const router = express.Router();
 
@@ -114,6 +115,20 @@ router.get('/shops/nearby', async (req, res) => {
     const code = error instanceof Error && 'code' in error ? String((error as { code?: string }).code) : 'INTERNAL_ERROR';
     const message = error instanceof Error ? error.message : 'Unable to load nearby stores';
     res.status(status || 500).json({ error: { code, message } });
+  }
+});
+
+router.get('/places/nearby', async (req, res) => {
+  try {
+    const latitude = Number(req.query.latitude);
+    const longitude = Number(req.query.longitude);
+    const radius = Number(req.query.radius) || 5_000;
+    res.json({ data: await listNearbyMapPlaces(latitude, longitude, radius), updatedAt: new Date().toISOString() });
+  } catch (error) {
+    const status = error instanceof Error && 'status' in error ? Number((error as { status?: number }).status) : 502;
+    const code = error instanceof Error && 'code' in error ? String((error as { code?: string }).code) : 'MAP_PROVIDER_ERROR';
+    const message = error instanceof Error ? error.message : 'Unable to load nearby map places';
+    res.status(status || 502).json({ error: { code, message } });
   }
 });
 

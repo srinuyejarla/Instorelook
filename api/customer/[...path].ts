@@ -11,6 +11,7 @@ import {
   listNearbyStores,
   type PublicProductQuery,
 } from '../../src/api/catalog';
+import { listNearbyMapPlaces } from '../../src/api/places';
 
 type QueryValue = string | string[] | undefined;
 
@@ -163,6 +164,14 @@ export default async function handler(req: CustomerRequest, res: ServerResponse)
       const longitude = Number(queryValue(url, req, 'longitude'));
       const radius = Number(queryValue(url, req, 'radius')) || 25_000;
       sendJson(res, 200, { data: await listNearbyStores(latitude, longitude, radius) });
+      return;
+    }
+
+    if (resource === 'places' && id === 'nearby' && segments.length === 2) {
+      const latitude = Number(queryValue(url, req, 'latitude'));
+      const longitude = Number(queryValue(url, req, 'longitude'));
+      const radius = Number(queryValue(url, req, 'radius')) || 5_000;
+      sendJson(res, 200, { data: await listNearbyMapPlaces(latitude, longitude, radius) });
       return;
     }
 

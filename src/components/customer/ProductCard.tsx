@@ -68,7 +68,7 @@ export default function ProductCard({ product, onOpen, variant = 'grid' }: Produ
 
       <div className="p-3 flex flex-col gap-1">
         <span className={`self-start rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] ${isDemoCatalog ? 'bg-[#eff8cf] text-[#40520b]' : 'bg-[#e4f7da] text-[#2f7e1a]'}`}>
-          {isDemoCatalog ? 'Curated demo catalog' : 'Live store inventory'}
+           {isDemoCatalog ? 'Sample catalog · verify in store' : 'Live store inventory'}
         </span>
         {product.brand && (
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest line-clamp-1">

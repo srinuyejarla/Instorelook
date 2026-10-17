@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { motion } from 'motion/react';
 import * as Icons from '../Icons';
 import { Navigate } from '../../types';
-import { customerApi, Store } from '../../lib/customerApi';
+import { customerApi, NearbyPlace, Store } from '../../lib/customerApi';
 import { isDemoCatalog } from '../../config';
 
 interface Props {
@@ -25,8 +25,9 @@ const storeIcon = L.divIcon({
   iconAnchor: [0, 0],
 });
 
-// India is the safe map fallback before the shopper grants location access.
-const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629];
+// Hyderabad is only a neutral India fallback while the browser permission
+// prompt is open. The UI never labels this as the shopper's location.
+const DEFAULT_CENTER: [number, number] = [17.3850, 78.4867];
 
 function Recenter({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
@@ -38,6 +39,8 @@ function Recenter({ center, zoom }: { center: [number, number]; zoom: number }) 
 
 export default function NearbyStoresScreen({ navigate }: Props) {
   const [stores, setStores] = useState<Store[]>([]);
+  const [mapPlaces, setMapPlaces] = useState<NearbyPlace[]>([]);
+  const [mapError, setMapError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [locating, setLocating] = useState(false);
@@ -52,6 +55,18 @@ export default function NearbyStoresScreen({ navigate }: Props) {
         ? await customerApi.nearbyShops(position[0], position[1]).then((nearby) => nearby.length ? nearby : customerApi.shops()).catch(() => customerApi.shops())
         : await customerApi.shops();
       setStores(nextStores);
+      if (position) {
+        try {
+          setMapPlaces(await customerApi.nearbyPlaces(position[0], position[1]));
+          setMapError(false);
+        } catch {
+          setMapPlaces([]);
+          setMapError(true);
+        }
+      } else {
+        setMapPlaces([]);
+        setMapError(false);
+      }
     } catch {
       setStores([]);
       setError(true);
@@ -109,14 +124,14 @@ export default function NearbyStoresScreen({ navigate }: Props) {
     <div className="min-h-full bg-[#f7f7f2] pb-10">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#e4e3db] bg-[#f7f7f2]/95 px-5 pb-4 pt-5 backdrop-blur-xl sm:px-8">
         <div>
-          <h1 className="text-2xl font-black tracking-[-0.05em] text-[#171717]">{userPos ? 'Stores Near You' : 'Stores Across the US'}</h1>
+          <h1 className="text-2xl font-black tracking-[-0.05em] text-[#171717]">{userPos ? 'Stores Near You' : 'Find stores near you'}</h1>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             {loading ? 'Finding stores…' : `${stores.length} store${stores.length === 1 ? '' : 's'} listed`}
           </p>
         </div>
         <div className="flex items-center gap-2">
         <span className={`hidden rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] sm:inline-flex ${isDemoCatalog ? 'bg-[#eff8cf] text-[#40520b]' : 'bg-[#e4f7da] text-[#2f7e1a]'}`}>
-          {isDemoCatalog ? 'Curated demo catalog' : 'Live store inventory'}
+            {isDemoCatalog ? 'Sample catalog' : 'Live store inventory'}
         </span>
         <button
           onClick={locate}
@@ -163,13 +178,32 @@ export default function NearbyStoresScreen({ navigate }: Props) {
                 </Popup>
               </Marker>
             ))}
+            {mapPlaces.map((place) => (
+              <Marker key={place.id} position={[place.latitude, place.longitude]} icon={storeIcon}>
+                <Popup>
+                  <div className="text-center">
+                    <p style={{ fontWeight: 800, margin: 0 }}>{place.name}</p>
+                    <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 6px' }}>{place.category}</p>
+                    <a href={place.directionsUrl} target="_blank" rel="noreferrer" style={{ color: '#0d7d6f', fontWeight: 800, fontSize: 11 }}>Get directions</a>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
           </MapContainer>
         </div>
       </div>
 
       {/* Store list */}
       <div className="mx-auto max-w-6xl px-5 pt-5 sm:px-8">
-        <h2 className="text-sm font-black text-[#1A1A1A] uppercase tracking-wider mb-3">All Stores</h2>
+         <div className="flex items-center justify-between mb-3">
+           <h2 className="text-sm font-black text-[#1A1A1A] uppercase tracking-wider">Nearby stores</h2>
+           {userPos && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Live map data</span>}
+         </div>
+         {mapError && userPos && (
+           <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-bold text-amber-800">
+             Live map businesses are temporarily unavailable. Registered InStoreLook stores are still shown. Configure a production OpenStreetMap/Places provider in <code>OSM_OVERPASS_URL</code> for reliable deployment data.
+           </div>
+         )}
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -183,7 +217,7 @@ export default function NearbyStoresScreen({ navigate }: Props) {
             <p className="mt-1 text-xs font-medium text-slate-500">Try again when the catalog service is available.</p>
             <button type="button" onClick={() => { setError(false); setLoading(true); setRetryToken((value) => value + 1); }} className="mt-5 rounded-full bg-[#171717] px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-white">Try again</button>
           </div>
-        ) : stores.length ? (
+        ) : stores.length || mapPlaces.length ? (
           <div className="space-y-3">
             {stores.map((s) => (
               <motion.button
@@ -215,6 +249,26 @@ export default function NearbyStoresScreen({ navigate }: Props) {
                   <Icons.ChevronRight size={18} className="text-slate-300" />
                 </div>
               </motion.button>
+            ))}
+            {mapPlaces.map((place) => (
+              <div key={place.id} className="w-full text-left bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0"><Icons.Map size={20} /></div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-[#1A1A1A] line-clamp-1">{place.name}</h3>
+                      <span className="text-[9px] font-black text-blue-600 whitespace-nowrap">{(place.distanceMeters / 1000).toFixed(1)} km</span>
+                    </div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{place.category} · {place.source}</p>
+                    <p className="text-[11px] font-medium text-slate-500 mt-1">{place.address}</p>
+                    {place.landmark && <p className="text-[10px] font-bold text-slate-500 mt-1">Near {place.landmark}</p>}
+                    <div className="flex gap-2 mt-3">
+                      {place.phone && <a href={`tel:${place.phone}`} className="rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider">Call</a>}
+                      <a href={place.directionsUrl} target="_blank" rel="noreferrer" className="rounded-lg bg-[#0d7d6f] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white">Directions</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         ) : (

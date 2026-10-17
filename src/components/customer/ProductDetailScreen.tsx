@@ -179,7 +179,7 @@ export default function ProductDetailScreen({ navigate, productId }: Props) {
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{product.brand}</span>
           )}
           <span className={`mt-2 inline-flex self-start rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] ${isDemoCatalog ? 'bg-[#eff8cf] text-[#40520b]' : 'bg-[#e4f7da] text-[#2f7e1a]'}`}>
-            {isDemoCatalog ? 'Curated demo catalog' : 'Live store inventory'}
+             {isDemoCatalog ? 'Sample catalog · verify in store' : 'Live store inventory'}
           </span>
           <h1 className="text-xl font-black text-[#1A1A1A] leading-tight mt-0.5">{product.name}</h1>
 
