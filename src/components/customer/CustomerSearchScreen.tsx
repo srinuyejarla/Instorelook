@@ -92,6 +92,13 @@ export default function CustomerSearchScreen({ navigate, initialCategory }: Prop
   };
 
   const chips = useMemo(() => ['All', ...(categories.length ? categories : CATEGORY_FALLBACK)], [categories]);
+  const hasActiveFilters = Boolean(debounced || category !== 'All' || inStockOnly || sort !== 'newest');
+  const clearFilters = () => {
+    setQuery('');
+    setCategory('All');
+    setInStockOnly(false);
+    setSort('newest');
+  };
 
   return (
     <div className="min-h-full bg-[#f7f7f2] pb-10">
@@ -138,6 +145,7 @@ export default function CustomerSearchScreen({ navigate, initialCategory }: Prop
             <button
               key={c}
               onClick={() => setCategory(c)}
+              aria-pressed={category === c}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-black whitespace-nowrap border transition-colors ${
                 category === c ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]' : 'bg-white text-slate-600 border-slate-200'
               }`}
@@ -151,6 +159,7 @@ export default function CustomerSearchScreen({ navigate, initialCategory }: Prop
         <div className="flex items-center justify-between pt-3">
           <button
             onClick={() => setInStockOnly((v) => !v)}
+            aria-pressed={inStockOnly}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-colors ${
               inStockOnly ? 'green-badge border-emerald-200' : 'bg-white text-slate-500 border-slate-200'
             }`}
@@ -160,12 +169,15 @@ export default function CustomerSearchScreen({ navigate, initialCategory }: Prop
             </span>
             In stock only
           </button>
-          {!loading && (
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+           <div className="flex items-center gap-3">
+           {hasActiveFilters && <button type="button" onClick={clearFilters} className="text-[10px] font-black uppercase tracking-widest text-[#0d7d6f]">Reset</button>}
+           {!loading && (
+             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
               {products.length}
               {hasMore ? '+' : ''} items
             </span>
-          )}
+           )}
+           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
@@ -182,7 +194,7 @@ export default function CustomerSearchScreen({ navigate, initialCategory }: Prop
           </button>
         </div>
         <span className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] ${isDemoCatalog ? 'bg-[#eff8cf] text-[#40520b]' : 'bg-[#e4f7da] text-[#2f7e1a]'}`}>
-          {isDemoCatalog ? 'Curated demo catalog' : 'Live store inventory'}
+           {isDemoCatalog ? 'Sample catalog · verify in store' : 'Live store inventory'}
         </span>
         </div>
       </header>
@@ -227,14 +239,9 @@ export default function CustomerSearchScreen({ navigate, initialCategory }: Prop
             <p className="text-xs font-medium text-slate-500 mt-1">
               {debounced ? `Nothing for "${debounced}"` : 'Try a different category or search.'}
             </p>
-            {(debounced || category !== 'All' || inStockOnly || sort !== 'newest') && (
-              <button
-                onClick={() => {
-                  setQuery('');
-                  setCategory('All');
-                  setInStockOnly(false);
-                  setSort('newest');
-                }}
+             {hasActiveFilters && (
+               <button
+                 onClick={clearFilters}
                 className="mt-4 text-xs font-black text-[#0d7d6f] uppercase tracking-widest"
               >
                 Clear filters

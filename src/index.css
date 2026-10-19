@@ -299,3 +299,14 @@ html[data-theme='dark'] .app-shell input {
   background-size: 200% 100%;
   animation: shimmer-light 1.5s infinite linear;
 }
+
+.customer-bottom-nav {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 640px) {
+  .customer-bottom-nav button {
+    min-width: 3.75rem;
+    min-height: 2.75rem;
+  }
+}

@@ -26,7 +26,7 @@ export default function CustomerLayout({ current, navigate, children, themeToggl
     <div className="customer-layout flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#f7f7f2]">
       <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
 
-      <nav aria-label="Shopper navigation" className="sticky bottom-0 z-40 shrink-0 border-t border-[#e4e3db] bg-[#f7f7f2]/95 px-3 py-2 backdrop-blur-xl">
+      <nav aria-label="Shopper navigation" className="customer-bottom-nav sticky bottom-0 z-40 shrink-0 border-t border-[#e4e3db] bg-[#f7f7f2]/95 px-3 py-2 backdrop-blur-xl">
         {themeToggle && <div className="mx-auto flex max-w-xl justify-end px-1 pb-2">{themeToggle}</div>}
         <div className="mx-auto flex h-14 max-w-xl items-center justify-around gap-1 rounded-[1.35rem] border border-[#deded5] bg-white px-2 shadow-[0_8px_30px_rgba(20,20,20,0.06)] sm:h-16 sm:max-w-2xl">
           {TABS.map((tab) => {

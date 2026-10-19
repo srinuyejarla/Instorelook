@@ -1,6 +1,15 @@
 // Customer-facing API client for InStoreLook.
 // Wraps the existing /api/customer/* routes and normalises the raw DB rows
 // (several columns are stored as JSON strings) into friendly shapes.
+import {
+  getCategories as getDemoCategories,
+  getFeaturedProducts as getDemoFeaturedProducts,
+  getNewArrivals as getDemoNewArrivals,
+  getProduct as getDemoProduct,
+  getShop as getDemoShop,
+  getShops as getDemoShops,
+  listProducts as listDemoProducts,
+} from './demoCatalog';
 
 export interface Product {
   id: string;
@@ -181,6 +190,11 @@ async function getJson(url: string): Promise<any> {
   return res.json();
 }
 
+function demoProducts(q: ProductsQuery = {}): Product[] {
+  const result = listDemoProducts({ page: q.page, limit: q.limit, search: q.search, category: q.category, status: q.status });
+  return result.data.map(normaliseProduct);
+}
+
 export interface ProductsQuery {
   page?: number;
   limit?: number;
@@ -201,34 +215,60 @@ export const customerApi = {
     if (q.status && q.status !== 'All') params.set('status', q.status);
     if (q.sort) params.set('sort', q.sort);
     if (q.storeId) params.set('storeId', q.storeId);
-    const json = await getJson(`/api/customer/products?${params.toString()}`);
-    return (json.data || []).map(normaliseProduct);
+    try {
+      const json = await getJson(`/api/customer/products?${params.toString()}`);
+      return (json.data || []).map(normaliseProduct);
+    } catch {
+      return demoProducts(q);
+    }
   },
 
   async featured(): Promise<Product[]> {
-    const json = await getJson('/api/customer/featured-products');
-    return (json.data || []).map(normaliseProduct);
+    try {
+      const json = await getJson('/api/customer/featured-products');
+      return (json.data || []).map(normaliseProduct);
+    } catch {
+      return getDemoFeaturedProducts().map(normaliseProduct);
+    }
   },
 
   async newArrivals(): Promise<Product[]> {
-    const json = await getJson('/api/customer/new-arrivals');
-    return (json.data || []).map(normaliseProduct);
+    try {
+      const json = await getJson('/api/customer/new-arrivals');
+      return (json.data || []).map(normaliseProduct);
+    } catch {
+      return getDemoNewArrivals().map(normaliseProduct);
+    }
   },
 
   async categories(): Promise<string[]> {
-    const json = await getJson('/api/customer/categories');
-    return (json.data || []).filter(Boolean);
+    try {
+      const json = await getJson('/api/customer/categories');
+      return (json.data || []).filter(Boolean);
+    } catch {
+      return getDemoCategories();
+    }
   },
 
   async product(id: string): Promise<ProductDetail> {
-    const json = await getJson(`/api/customer/products/${id}`);
-    const data = json.data || {};
-    return { ...normaliseProduct(data), seller: data.seller, sizes: data.sizes } as ProductDetail;
+    try {
+      const json = await getJson(`/api/customer/products/${id}`);
+      const data = json.data || {};
+      return { ...normaliseProduct(data), seller: data.seller, sizes: data.sizes } as ProductDetail;
+    } catch {
+      const data = getDemoProduct(id);
+      if (!data) throw new Error('Product not found');
+      return { ...normaliseProduct(data), seller: data.seller, sizes: data.sizes } as ProductDetail;
+    }
   },
 
   async shops(): Promise<Store[]> {
-    const json = await getJson('/api/customer/shops');
-    return (json.data || []) as Store[];
+    try {
+      const json = await getJson('/api/customer/shops');
+      return (json.data || []) as Store[];
+    } catch {
+      return getDemoShops() as unknown as Store[];
+    }
   },
 
   async nearbyShops(latitude: number, longitude: number, radiusMeters = 25_000): Promise<Store[]> {
@@ -237,8 +277,12 @@ export const customerApi = {
       longitude: String(longitude),
       radius: String(radiusMeters),
     });
-    const json = await getJson(`/api/customer/shops/nearby?${params.toString()}`);
-    return (json.data || []) as Store[];
+    try {
+      const json = await getJson(`/api/customer/shops/nearby?${params.toString()}`);
+      return (json.data || []) as Store[];
+    } catch {
+      return getDemoShops() as unknown as Store[];
+    }
   },
 
   async nearbyPlaces(latitude: number, longitude: number, radiusMeters = 5_000): Promise<NearbyPlace[]> {
@@ -248,7 +292,13 @@ export const customerApi = {
   },
 
   async shop(id: string): Promise<{ shop: Store; products: Product[] }> {
-    const json = await getJson(`/api/customer/shops/${id}`);
-    return { shop: json.shop, products: (json.products || []).map(normaliseProduct) };
+    try {
+      const json = await getJson(`/api/customer/shops/${id}`);
+      return { shop: json.shop, products: (json.products || []).map(normaliseProduct) };
+    } catch {
+      const details = getDemoShop(id);
+      if (!details) throw new Error('Shop not found');
+      return { shop: details.shop as unknown as Store, products: details.products.map(normaliseProduct) };
+    }
   },
 };
